@@ -321,6 +321,8 @@ struct siprand_state {
 };
 
 static DEFINE_PER_CPU(struct siprand_state, net_rand_state) __latent_entropy;
+DEFINE_PER_CPU(unsigned long, net_rand_noise);
+EXPORT_SYMBOL(net_rand_noise);
 
 #if BITS_PER_LONG == 64
 /*
@@ -375,9 +377,12 @@ static DEFINE_PER_CPU(struct siprand_state, net_rand_state) __latent_entropy;
 static u32 siprand_u32(struct siprand_state *s)
 {
 	unsigned long v0 = s->v[0], v1 = s->v[1], v2 = s->v[2], v3 = s->v[3];
+	unsigned long n = __this_cpu_read(net_rand_noise);
 
+	v3 ^= n;
 	SIPROUND(v0, v1, v2, v3);
 	SIPROUND(v0, v1, v2, v3);
+	v0 ^= n;
 	s->v[0] = v0;  s->v[1] = v1;  s->v[2] = v2;  s->v[3] = v3;
 	return v1 + v3;
 }
