@@ -65,6 +65,7 @@ static inline void prandom_seed_state(struct rnd_state *state, u64 seed)
 	state->s2 = __seed(i,   8U);
 	state->s3 = __seed(i,  16U);
 	state->s4 = __seed(i, 128U);
+	__this_cpu_add(net_rand_noise, i);
 }
 
 /* Pseudo random number generator from numerical recipes. */
