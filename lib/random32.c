@@ -444,7 +444,27 @@ EXPORT_SYMBOL(prandom_bytes);
  */
 void prandom_seed(u32 entropy)
 {
-	/* FIXME: Where to feed this in? */
+	int i;
+
+	add_device_randomness(&entropy, sizeof(entropy));
+
+	for_each_possible_cpu(i) {
+		struct siprand_state *state = per_cpu_ptr(&net_rand_state, i);
+		unsigned long v0 = state->v[0], v1 = state->v[1];
+		unsigned long v2 = state->v[2], v3 = state->v[3];
+
+		do {
+			v3 ^= entropy;
+			SIPROUND(v0, v1, v2, v3);
+			SIPROUND(v0, v1, v2, v3);
+			v0 ^= entropy;
+		} while (unlikely(!v0 || !v1 || !v2 || !v3));
+
+		WRITE_ONCE(state->v[0], v0);
+		WRITE_ONCE(state->v[1], v1);
+		WRITE_ONCE(state->v[2], v2);
+		WRITE_ONCE(state->v[3], v3);
+	}
 }
 EXPORT_SYMBOL(prandom_seed);
 
