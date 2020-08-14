@@ -321,8 +321,7 @@ struct siprand_state {
 };
 
 static DEFINE_PER_CPU(struct siprand_state, net_rand_state) __latent_entropy;
-DEFINE_PER_CPU(unsigned long, net_rand_noise);
-EXPORT_SYMBOL(net_rand_noise);
+static DEFINE_PER_CPU(unsigned long[4], net_rand_noise) __latent_entropy;
 
 #if BITS_PER_LONG == 64
 /*
@@ -377,7 +376,7 @@ EXPORT_SYMBOL(net_rand_noise);
 static u32 siprand_u32(struct siprand_state *s)
 {
 	unsigned long v0 = s->v[0], v1 = s->v[1], v2 = s->v[2], v3 = s->v[3];
-	unsigned long n = __this_cpu_read(net_rand_noise);
+	unsigned long n = __this_cpu_read(net_rand_noise[0]);
 
 	v3 ^= n;
 	SIPROUND(v0, v1, v2, v3);
@@ -405,6 +404,28 @@ u32 prandom_u32(void)
 	return res;
 }
 EXPORT_SYMBOL(prandom_u32);
+
+void prandom_u32_add_noise(unsigned long a, unsigned long b,
+			   unsigned long c, unsigned long d)
+{
+	unsigned long *noise = get_cpu_ptr(net_rand_noise);
+
+	a ^= noise[0];
+	b ^= noise[1];
+	c ^= noise[2];
+	d ^= noise[3];
+	/*
+	 * This is not used cryptographically; it's just
+	 * a convenient 4-word hash function.
+	 */
+	SIPROUND(a, b, c, d);
+	noise[0] = a;
+	noise[1] = b;
+	noise[2] = c;
+	noise[3] = d;
+	put_cpu_ptr(net_rand_noise);
+}
+EXPORT_SYMBOL(prandom_u32_add_noise);
 
 /**
  *	prandom_bytes - get the requested number of pseudo-random bytes
