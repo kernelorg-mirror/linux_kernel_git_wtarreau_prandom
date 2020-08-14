@@ -335,7 +335,7 @@ static DEFINE_PER_CPU(struct siprand_state, net_rand_state) __latent_entropy;
 #define K0 (0x736f6d6570736575 ^ 0x6c7967656e657261 )
 #define K1 (0x646f72616e646f6d ^ 0x7465646279746573 )
 
-#elif BITS_PER_LONG == 23
+#elif BITS_PER_LONG == 32
 /*
  * On 32-bit machines, we use HSipHash, a reduced-width version of SipHash.
  * This is weaker, but 32-bit machines are not used for high-traffic
