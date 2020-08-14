@@ -373,7 +373,7 @@ static DEFINE_PER_CPU(unsigned long[4], net_rand_noise) __latent_entropy;
  *   Second, since the last combining operation was xor, continue the
  *   pattern of alternating xor/add for a tiny bit of extra non-linearity.
  */
-static u32 siprand_u32(struct siprand_state *s)
+static inline u32 siprand_u32(struct siprand_state *s)
 {
 	unsigned long v0 = s->v[0], v1 = s->v[1], v2 = s->v[2], v3 = s->v[3];
 	unsigned long n = __this_cpu_read(net_rand_noise[0]);
@@ -385,6 +385,7 @@ static u32 siprand_u32(struct siprand_state *s)
 	s->v[0] = v0;  s->v[1] = v1;  s->v[2] = v2;  s->v[3] = v3;
 	return v1 + v3;
 }
+//EXPORT_SYMBOL(siprand_u32);
 
 
 /**
