@@ -324,37 +324,6 @@ static DEFINE_PER_CPU(struct siprand_state, net_rand_state) __latent_entropy;
 DEFINE_PER_CPU(unsigned long, net_rand_noise);
 EXPORT_PER_CPU_SYMBOL(net_rand_noise);
 
-#if BITS_PER_LONG == 64
-/*
- * The core SipHash round function.  Each line can be executed in
- * parallel given enough CPU resources.
- */
-#define SIPROUND(v0,v1,v2,v3) ( \
-	v0 += v1, v1 = rol64(v1, 13),  v2 += v3, v3 = rol64(v3, 16), \
-	v1 ^= v0, v0 = rol64(v0, 32),  v3 ^= v2,                     \
-	v0 += v3, v3 = rol64(v3, 21),  v2 += v1, v1 = rol64(v1, 17), \
-	v3 ^= v0,                      v1 ^= v2, v2 = rol64(v2, 32)  )
-#define K0 (0x736f6d6570736575 ^ 0x6c7967656e657261 )
-#define K1 (0x646f72616e646f6d ^ 0x7465646279746573 )
-
-#elif BITS_PER_LONG == 32
-/*
- * On 32-bit machines, we use HSipHash, a reduced-width version of SipHash.
- * This is weaker, but 32-bit machines are not used for high-traffic
- * applications, so there is less output for an attacker to analyze.
- */
-#define SIPROUND(v0,v1,v2,v3) ( \
-	v0 += v1, v1 = rol32(v1,  5),  v2 += v3, v3 = rol32(v3,  8), \
-	v1 ^= v0, v0 = rol32(v0, 16),  v3 ^= v2,                     \
-	v0 += v3, v3 = rol32(v3,  7),  v2 += v1, v1 = rol32(v1, 13), \
-	v3 ^= v0,                      v1 ^= v2, v2 = rol32(v2, 16)  )
-#define K0 0x6c796765
-#define K1 0x74656462
-
-#else
-#error Unsupported BITS_PER_LONG
-#endif
-
 /*
  * This is the core CPRNG function.  As "pseudorandom", this is not used
  * for truly valuable things, just intended to be a PITA to guess.
@@ -380,8 +349,8 @@ static inline u32 siprand_u32(struct siprand_state *s)
 	unsigned long n = __this_cpu_read(net_rand_noise);
 
 	v3 ^= n;
-	SIPROUND(v0, v1, v2, v3);
-	SIPROUND(v0, v1, v2, v3);
+	PRND_SIPROUND(v0, v1, v2, v3);
+	PRND_SIPROUND(v0, v1, v2, v3);
 	v0 ^= n;
 	s->v[0] = v0;  s->v[1] = v1;  s->v[2] = v2;  s->v[3] = v3;
 	return v1 + v3;
@@ -456,8 +425,8 @@ void prandom_seed(u32 entropy)
 
 		do {
 			v3 ^= entropy;
-			SIPROUND(v0, v1, v2, v3);
-			SIPROUND(v0, v1, v2, v3);
+			PRND_SIPROUND(v0, v1, v2, v3);
+			PRND_SIPROUND(v0, v1, v2, v3);
 			v0 ^= entropy;
 		} while (unlikely(!v0 || !v1 || !v2 || !v3));
 
@@ -482,15 +451,15 @@ static int __init prandom_init_early(void)
 		v0 = jiffies;
 	if (!arch_get_random_long(&v1))
 		v0 = random_get_entropy();
-	v2 = v0 ^ K0;
-	v3 = v1 ^ K1;
+	v2 = v0 ^ PRND_K0;
+	v3 = v1 ^ PRND_K1;
 
 	for_each_possible_cpu(i) {
 		struct siprand_state *state;
 
 		v3 ^= i;
-		SIPROUND(v0, v1, v2, v3);
-		SIPROUND(v0, v1, v2, v3);
+		PRND_SIPROUND(v0, v1, v2, v3);
+		PRND_SIPROUND(v0, v1, v2, v3);
 		v0 ^= i;
 
 		state = per_cpu_ptr(&net_rand_state, i);
@@ -520,8 +489,8 @@ static void prandom_reseed(struct timer_list *unused)
 	 */
 	for_each_possible_cpu(i) {
 		struct siprand_state *state;
-		unsigned long v0 = get_random_long(), v2 = v0 ^ K0;
-		unsigned long v1 = get_random_long(), v3 = v1 ^ K1;
+		unsigned long v0 = get_random_long(), v2 = v0 ^ PRND_K0;
+		unsigned long v1 = get_random_long(), v3 = v1 ^ PRND_K1;
 #if BITS_PER_LONG == 32
 		int j;
 
@@ -534,8 +503,8 @@ static void prandom_reseed(struct timer_list *unused)
 		for (j = 0; j < 2; j++) {
 			unsigned long m = get_random_long();
 			v3 ^= m;
-			SIPROUND(v0, v1, v2, v3);
-			SIPROUND(v0, v1, v2, v3);
+			PRND_SIPROUND(v0, v1, v2, v3);
+			PRND_SIPROUND(v0, v1, v2, v3);
 			v0 ^= m;
 		}
 #endif
