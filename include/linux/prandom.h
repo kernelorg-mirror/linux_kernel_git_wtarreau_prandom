@@ -32,8 +32,8 @@ DECLARE_PER_CPU(unsigned long, net_rand_noise);
 	v1 ^= v0, v0 = rol64(v0, 32),  v3 ^= v2,                     \
 	v0 += v3, v3 = rol64(v3, 21),  v2 += v1, v1 = rol64(v1, 17), \
 	v3 ^= v0,                      v1 ^= v2, v2 = rol64(v2, 32)  )
-#define K0 (0x736f6d6570736575 ^ 0x6c7967656e657261 )
-#define K1 (0x646f72616e646f6d ^ 0x7465646279746573 )
+#define PRND_K0 (0x736f6d6570736575 ^ 0x6c7967656e657261 )
+#define PRND_K1 (0x646f72616e646f6d ^ 0x7465646279746573 )
 
 #elif BITS_PER_LONG == 32
 /*
@@ -46,8 +46,8 @@ DECLARE_PER_CPU(unsigned long, net_rand_noise);
 	v1 ^= v0, v0 = rol32(v0, 16),  v3 ^= v2,                     \
 	v0 += v3, v3 = rol32(v3,  7),  v2 += v1, v1 = rol32(v1, 13), \
 	v3 ^= v0,                      v1 ^= v2, v2 = rol32(v2, 16)  )
-#define K0 0x6c796765
-#define K1 0x74656462
+#define PRND_K0 0x6c796765
+#define PRND_K1 0x74656462
 
 #else
 #error Unsupported BITS_PER_LONG
