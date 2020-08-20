@@ -317,7 +317,10 @@ static void __init prandom_state_selftest(void)
  */
 
 struct siprand_state {
-	unsigned long v[4];
+	unsigned long v0;
+	unsigned long v1;
+	unsigned long v2;
+	unsigned long v3;
 };
 
 static DEFINE_PER_CPU(struct siprand_state, net_rand_state) __latent_entropy;
@@ -345,14 +348,14 @@ EXPORT_PER_CPU_SYMBOL(net_rand_noise);
  */
 static inline u32 siprand_u32(struct siprand_state *s)
 {
-	unsigned long v0 = s->v[0], v1 = s->v[1], v2 = s->v[2], v3 = s->v[3];
+	unsigned long v0 = s->v0, v1 = s->v1, v2 = s->v2, v3 = s->v3;
 	unsigned long n = __this_cpu_read(net_rand_noise);
 
 	v3 ^= n;
 	PRND_SIPROUND(v0, v1, v2, v3);
 	PRND_SIPROUND(v0, v1, v2, v3);
 	v0 ^= n;
-	s->v[0] = v0;  s->v[1] = v1;  s->v[2] = v2;  s->v[3] = v3;
+	s->v0 = v0;  s->v1 = v1;  s->v2 = v2;  s->v3 = v3;
 	return v1 + v3;
 }
 //EXPORT_SYMBOL(siprand_u32);
@@ -420,8 +423,8 @@ void prandom_seed(u32 entropy)
 
 	for_each_possible_cpu(i) {
 		struct siprand_state *state = per_cpu_ptr(&net_rand_state, i);
-		unsigned long v0 = state->v[0], v1 = state->v[1];
-		unsigned long v2 = state->v[2], v3 = state->v[3];
+		unsigned long v0 = state->v0, v1 = state->v1;
+		unsigned long v2 = state->v2, v3 = state->v3;
 
 		do {
 			v3 ^= entropy;
@@ -430,10 +433,10 @@ void prandom_seed(u32 entropy)
 			v0 ^= entropy;
 		} while (unlikely(!v0 || !v1 || !v2 || !v3));
 
-		WRITE_ONCE(state->v[0], v0);
-		WRITE_ONCE(state->v[1], v1);
-		WRITE_ONCE(state->v[2], v2);
-		WRITE_ONCE(state->v[3], v3);
+		WRITE_ONCE(state->v0, v0);
+		WRITE_ONCE(state->v1, v1);
+		WRITE_ONCE(state->v2, v2);
+		WRITE_ONCE(state->v3, v3);
 	}
 }
 EXPORT_SYMBOL(prandom_seed);
@@ -463,8 +466,8 @@ static int __init prandom_init_early(void)
 		v0 ^= i;
 
 		state = per_cpu_ptr(&net_rand_state, i);
-		state->v[0] = v0;  state->v[1] = v1;
-		state->v[2] = v2;  state->v[3] = v3;
+		state->v0 = v0;  state->v1 = v1;
+		state->v2 = v2;  state->v3 = v3;
 	}
 
 	return 0;
@@ -518,10 +521,10 @@ static void prandom_reseed(struct timer_list *unused)
 		 * we write contains no zero words.
 		 */
 		state = per_cpu_ptr(&net_rand_state, i);
-		WRITE_ONCE(state->v[0], v0 ? v0 : -1ul);
-		WRITE_ONCE(state->v[1], v1 ? v1 : -1ul);
-		WRITE_ONCE(state->v[2], v2 ? v2 : -1ul);
-		WRITE_ONCE(state->v[3], v3 ? v3 : -1ul);
+		WRITE_ONCE(state->v0, v0 ? v0 : -1ul);
+		WRITE_ONCE(state->v1, v1 ? v1 : -1ul);
+		WRITE_ONCE(state->v2, v2 ? v2 : -1ul);
+		WRITE_ONCE(state->v3, v3 ? v3 : -1ul);
 	}
 
 	/* reseed every ~60 seconds, in [40 .. 80) interval with slack */
