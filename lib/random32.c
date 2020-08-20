@@ -322,6 +322,7 @@ struct siprand_state {
 
 static DEFINE_PER_CPU(struct siprand_state, net_rand_state) __latent_entropy;
 DEFINE_PER_CPU(unsigned long, net_rand_noise);
+EXPORT_PER_CPU_SYMBOL(net_rand_noise);
 
 #if BITS_PER_LONG == 64
 /*
